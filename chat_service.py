@@ -23,9 +23,9 @@ def handle_messages():
   print("Handling Messages")
   payload = request.get_json()
   print(payload)
-  for sender, message in messaging_events(payload):
-    print("Incoming from %s: %s" % (sender, message))
-    send_message(PAT, sender, message)
+  for sender, message, txtOutput in messaging_events(payload):
+    print("Incoming from %s: %s %s" % (sender, message, str(txtOutput)))
+    send_message(PAT, sender, message, txtOutput)
   return "ok"
 
 
@@ -104,9 +104,10 @@ def messaging_events(payload):
       amn_list = []
       print(payload)
 
+      txtOutput = False
       if event["message"]["nlp"]["entities"].get("greetings"):
-        yield event["sender"]["id"], json.dumps("Hi..! How can I help you").decode('unicode_escape')
-
+        txtOutput = True
+        yield event["sender"]["id"], json.dumps("Hi..! How can I help you").encode('unicode_escape'), txtOutput
 
       if event["message"]["nlp"]["entities"].get("location"):
         for i in event["message"]["nlp"]["entities"]["location"]:
@@ -127,26 +128,33 @@ def messaging_events(payload):
         tempD['name'] = "SORRY!!!"
         tempD['price_by_night'] = "There is no listing matching your requirement :("
         data2.append(tempD)
-      yield event["sender"]["id"], json.dumps(constructMsg(data2)).encode('unicode_escape')
+      yield event["sender"]["id"], json.dumps(constructMsg(data2)).encode('unicode_escape'), txtOutput
     else:
-      yield event["sender"]["id"], "I can't echo this"
+      txtOutput = True
+      yield event["sender"]["id"], json.dumps("I can't echo this").encode('unicode_escape'), txtOutput
 
-
-def send_message(token, recipient, text):
+def send_message(token, recipient, text, txtOutput):
   """Send the message text to recipient with id recipient.
   """
 
   print(">>>>>>>>>>>>>>>>>>>>>>>>>>FINAL<<<<<<<<<<<<<<<<<<<<<<<")
 
-  r = requests.post("https://graph.facebook.com/v2.6/me/messages",
-    params={"access_token": token},
-    data=json.dumps({
-      "recipient": {"id": recipient},
-      #"message": {"text": text.decode('unicode_escape')}
-      "message": {"attachment": text.decode('unicode_escape')}
-    }),
-    headers={'Content-type': 'application/json'})
-
+  if txtOutput:
+    r = requests.post("https://graph.facebook.com/v2.6/me/messages",
+      params={"access_token": token},
+      data=json.dumps({
+        "recipient": {"id": recipient},
+        "message": {"text": text.decode('unicode_escape')}
+      }),
+      headers={'Content-type': 'application/json'})
+  else:
+    r = requests.post("https://graph.facebook.com/v2.6/me/messages",
+      params={"access_token": token},
+      data=json.dumps({
+        "recipient": {"id": recipient},
+        "message": {"attachment": text.decode('unicode_escape')}
+      }),
+      headers={'Content-type': 'application/json'})
 
   print(r)
 
