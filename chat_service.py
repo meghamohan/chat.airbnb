@@ -47,7 +47,10 @@ def constructMsg(response):
           else:
             sub_ele['image_url'] = "https://pbs.twimg.com/profile_images/378800000138581024/9733bcb490d916fcd2feb5d0abef0cbc_400x400.jpeg"
           subbuttons['type'] = "web_url"
-          subbuttons['url'] = "https://airbnb.com"
+          if place.get('id'):
+            subbuttons['url'] = "http://megha.space/detailpage/" + place['id']
+          else:
+            subbuttons['url'] = "http://megha.space/eoyProject"
           subbuttons["title"] = "View Website"
           subbuttons["webview_height_ratio"] = "tall"
           buttons.append(subbuttons.copy())
@@ -66,17 +69,17 @@ def constructMsg(response):
 
 def searchForStates(name, sDict, states_list):
     for k, v in sDict.items():
-        if k == name:
+        if k.lower() == name.lower():
             states_list.append(v)
             return True
 def searchForCities(name, cDict, cities_list):
     for k, v in cDict.items():
-        if k == name:
+        if k.lower() == name.lower():
             cities_list.append(v)
             return True
 def searchForAmenities(name, aDict, amn_list):
     for k, v in aDict.items():
-        if k == name:
+        if k.lower() == name.lower():
             amn_list.append(v)
             return True
 
