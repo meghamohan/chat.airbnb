@@ -72,11 +72,13 @@ def searchForStates(name, sDict, states_list):
         if k.lower() == name.lower():
             states_list.append(v)
             return True
+    return False
 def searchForCities(name, cDict, cities_list):
     for k, v in cDict.items():
         if k.lower() == name.lower():
             cities_list.append(v)
             return True
+    return False
 def searchForAmenities(name, aDict, amn_list):
     for k, v in aDict.items():
         if k.lower() == name.lower():
@@ -108,33 +110,48 @@ def messaging_events(payload):
       print(payload)
 
       txtOutput = False
-      if event["message"]["nlp"]["entities"].get("greetings"):
-        txtOutput = True
-        yield event["sender"]["id"], json.dumps("Hi..! How can I help you").encode('unicode_escape'), txtOutput
 
-      if event["message"]["nlp"]["entities"].get("location"):
+      if event["message"]["nlp"]["entities"].get("bye") and event["message"]["nlp"]["entities"].get("bye")[0]['confidence']>0.9:
+        txtOutput = True
+        yield event["sender"]["id"], "Bye and Have a good day!", txtOutput
+
+      elif event["message"]["nlp"]["entities"].get("greetings") and event["message"]["nlp"]["entities"].get("greetings")[0]['confidence']>0.9:
+        txtOutput = True
+        yield event["sender"]["id"], "Hi! Welcome to HBNB. How can I help you?", txtOutput
+
+      elif event["message"]["nlp"]["entities"].get("thanks") and event["message"]["nlp"]["entities"].get("thanks")[0]['confidence']>0.9:
+        txtOutput = True
+        yield event["sender"]["id"], "You are welcome!", txtOutput
+
+      elif event["message"]["nlp"]["entities"].get("location") and event["message"]["nlp"]["entities"].get("location")[0].get("confidence")>0.93:
+        txtOutput = False
         for i in event["message"]["nlp"]["entities"]["location"]:
           if not searchForStates(i['value'], data_states, states_list):
-            searchForCities(i['value'], data_cities, cities_list)
-      finalDict["states"] = states_list
-      finalDict["cities"] = cities_list
-      if event["message"]["nlp"]["entities"].get("amenities"):
-        for i in event["message"]["nlp"]["entities"]["amenities"]:
-          searchForAmenities(i['value'], data_amn, amn_list)
-        finalDict["amenities"] = amn_list
+            if not searchForCities(i['value'], data_cities, cities_list):
+              yield event["sender"]["id"], "I am sorry! I could not find any listings for the location you are looking for :(", True
+              yield event["sender"]["id"], "Here are a few listings in HBNB..", True
+        finalDict["states"] = states_list
+        finalDict["cities"] = cities_list
+        if event["message"]["nlp"]["entities"].get("amenities"):
+          for i in event["message"]["nlp"]["entities"]["amenities"]:
+            searchForAmenities(i['value'], data_amn, amn_list)
+          finalDict["amenities"] = amn_list
 
-      url2 = 'http://api.megha.space/api/v1/places_search/'
-      r2 = requests.post(url = url2, data = json.dumps(finalDict), headers={'content-type': 'application/json'})
-      data2 = r2.json()
-      if not data2:
-        tempD = {}
-        tempD['name'] = "SORRY!!!"
-        tempD['price_by_night'] = "There is no listing matching your requirement :("
-        data2.append(tempD)
-      yield event["sender"]["id"], json.dumps(constructMsg(data2)).encode('unicode_escape'), txtOutput
+        url2 = 'http://api.megha.space/api/v1/places_search/'
+        r2 = requests.post(url = url2, data = json.dumps(finalDict), headers={'content-type': 'application/json'})
+        data2 = r2.json()
+        if not data2:
+          tempD = {}
+          tempD['name'] = "SORRY!!!"
+          tempD['price_by_night'] = "There is no listing matching your requirement :("
+          data2.append(tempD)
+        yield event["sender"]["id"], json.dumps(constructMsg(data2)).encode('unicode_escape'), txtOutput
+      elif event["message"]["nlp"]["entities"].get("location") and event["message"]["nlp"]["entities"].get("location")[0].get("confidence")<0.93:
+        txtOutput = True
+        yield event["sender"]["id"], "I am sorry! I dont get you.", txtOutput
     else:
       txtOutput = True
-      yield event["sender"]["id"], json.dumps("I can't echo this").encode('unicode_escape'), txtOutput
+      yield event["sender"]["id"], "I can't echo this", txtOutput
 
 def send_message(token, recipient, text, txtOutput):
   """Send the message text to recipient with id recipient.
@@ -147,7 +164,7 @@ def send_message(token, recipient, text, txtOutput):
       params={"access_token": token},
       data=json.dumps({
         "recipient": {"id": recipient},
-        "message": {"text": text.decode('unicode_escape')}
+        "message": {"text": text}
       }),
       headers={'Content-type': 'application/json'})
   else:
@@ -159,7 +176,6 @@ def send_message(token, recipient, text, txtOutput):
       }),
       headers={'Content-type': 'application/json'})
 
-  print(r)
 
   finalDict = {}
   cities_list = []
