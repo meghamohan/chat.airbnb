@@ -130,6 +130,15 @@ def messaging_events(payload):
             if not searchForCities(i['value'], data_cities, cities_list):
               yield event["sender"]["id"], "I am sorry! I could not find any listings for the location you are looking for :(", True
               yield event["sender"]["id"], "Here are a few listings in HBNB..", True
+        if len(states_list) > 0 and len(cities_list) > 0:
+          if states_list[0] and cities_list[0]:
+            url_sc = 'http://api.megha.space/api/v1/states/' + states_list[0] + '/cities'
+            r_sc = requests.get(url = url_sc)
+            data_sc = r_sc.json()
+            for i in data_sc:
+              if i['id'] == cities_list[0]:
+                states_list.pop()
+
         finalDict["states"] = states_list
         finalDict["cities"] = cities_list
         if event["message"]["nlp"]["entities"].get("amenities"):
@@ -175,7 +184,6 @@ def send_message(token, recipient, text, txtOutput):
         "message": {"attachment": text.decode('unicode_escape')}
       }),
       headers={'Content-type': 'application/json'})
-
 
   finalDict = {}
   cities_list = []
